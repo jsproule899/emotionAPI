@@ -1,15 +1,9 @@
 const dbPool = require('../services/dbService');
 const Mood = require('../models/Mood.js');
 
-
-
 const getMoodsByUser = (req, res) => {
 
-    const { user_id } = req.body;
-    const { page } = req.body || 1;
-    const { limit } = req.body || 10;
-    const { sort } = req.body || 'desc';
-    const { search } = req.body || '';
+    const { user_id, page, limit, sort, search} = req.query;
     const offset = limit * (page - 1);
 
     try {
@@ -41,7 +35,6 @@ const getMoodsByUser = (req, res) => {
                 if (err) { connection.release(); throw err }
                 connection.query(moodQuery, [user_id, search, search, +limit, +offset], async (err, moods) => {
                     if (err) { connection.release(); throw err };
-                    if (!moods) { connection.release(); throw new Error(err.message); }
                     if (moods.length > 0) {
                         let promises = moods.map(async (mood) => {
                             mood.emotion = await new Promise((resolve, reject) => {
@@ -57,6 +50,7 @@ const getMoodsByUser = (req, res) => {
                                 })
                             });
                             return mood;
+                            
                         });
                         Promise.all(promises).then(
                             moods => {
@@ -125,7 +119,7 @@ const createMood = (req, res) => {
                             if (newMood.context[context]) {
                                 var contextType;
 
-                                switch (context.toString()) {
+                                switch (context) {
                                     case "romance": contextType = 1; break;
                                     case "family": contextType = 2; break;
                                     case "work": contextType = 3; break;
@@ -226,7 +220,7 @@ const updateMood = (req, res) => {
                         for (let context in newContext) {
                             if (newContext[context]) {
                                 var contextType;
-                                switch (context.toString()) {
+                                switch (context) {
                                     case "Romance": contextType = 1; break;
                                     case "Family": contextType = 2; break;
                                     case "Work": contextType = 3; break;
@@ -242,7 +236,7 @@ const updateMood = (req, res) => {
                                 });
                             }
                         }
-                        connection.query(query4, [contextComment.toString()], (err, result) => {
+                        connection.query(query4, [contextComment], (err, result) => {
                             if (err) return connection.rollback(() => { connection.release(); throw err })
 
                             connection.commit((err) => {

@@ -64,7 +64,8 @@ const createAccount = (req, res) => {
             res.status(201);
             res.json({
                 status: 'success',
-                message: `Record ID ${result.insertId} added`
+                message: `Record ID ${result.insertId} added`,
+                result: result
             })
         }
     });
