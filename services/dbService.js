@@ -3,7 +3,7 @@ require('dotenv').config();
 
 const dbPool = mysql.createPool({
     host: process.env.HOST,
-    user: process.env.USER,
+    user: process.env.DBUSER,
     password: process.env.PASSWORD,
     database: process.env.DATABASE,
     port: process.env.DB_PORT,
@@ -12,7 +12,7 @@ const dbPool = mysql.createPool({
 })
 
 dbPool.getConnection((err, conn) => {
-    if (err) return console.log('\x1b[31m', 'Database not connected, please start the DB server', '\x1b[0m');
+    if (err) return console.log('\x1b[31m', 'Database not connected, please start the DB server' +'\n'+err.message, '\x1b[0m');
     console.log('\x1b[32m', "db status:" + conn.state, '\x1b[0m');
     conn.release();
 })

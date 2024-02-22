@@ -93,6 +93,95 @@ const getMoodsByUser = (req, res) => {
 
 }
 
+const getMoodsByUserAndDate = (req, res) => {
+
+    const { user_id}  = req.query;
+    const startDate = req.query.startDate || '1900-01-01';
+    const endDate = req.query.endDate || new Date().toISOString().substring(0,10);
+    
+
+    
+    
+
+    try {
+         var moodQuery = `SELECT DISTINCT mood_id,mood_timestamp,user_id,mood.context_id,context_comment,context_timestamp FROM mood LEFT JOIN context ON context.context_id = mood.context_id LEFT JOIN context_context_type ON context.context_id = 
+                                         context_context_type.context_id LEFT JOIN context_type ON context_type.context_type_id = context_context_type.context_type_id WHERE user_id = ? AND cast(mood_timestamp as date) BETWEEN ? AND ? `
+           
+
+        var emotionQuery = `SELECT emotion_name, emotion_level, emotion_colour, emotion_icon FROM mood JOIN mood_emotion ON mood.mood_id = mood_emotion.mood_id 
+                                JOIN emotion ON emotion.emotion_id = mood_emotion.emotion_id 
+                                 WHERE mood.mood_id = ?`
+
+        var contextQuery = `SELECT context_type_name, context_icon FROM mood JOIN context ON context.context_id = mood.context_id 
+                                JOIN context_context_type ON context.context_id = context_context_type.context_id
+                                JOIN context_type ON context_type.context_type_id = context_context_type.context_type_id 
+                                WHERE mood.context_id = ? `
+
+
+        dbPool.getConnection((err, connection) => {
+            if (err) throw err;
+            connection.beginTransaction((err) => {
+                if (err) { connection.release(); throw err }
+                connection.query(moodQuery, [user_id, startDate, endDate], async (err, moods) => {
+                    if (err) { connection.release(); throw err };
+                    if (moods.length > 0) {
+                        let promises = moods.map(async (mood) => {
+                            mood.emotion = await new Promise((resolve, reject) => {
+                                connection.query(emotionQuery, [mood.mood_id], (err, emotions) => {
+                                    if (err) { connection.release(); reject(err) };
+                                    resolve(emotions);
+                                })
+                            });
+                            mood.context = await new Promise((resolve, reject) => {
+                                connection.query(contextQuery, [mood.context_id], (err, context) => {
+                                    if (err) { connection.release(); reject(err) };
+                                    resolve(context);
+                                })
+                            });
+                            return mood;
+                            
+                        });
+                        Promise.all(promises).then(
+                            moods => {
+                                connection.commit(() => {
+                                    res.status(200);
+                                    res.json({
+                                        status: 'success',
+                                        message: `${moods.length} records retrieved`,
+                                        result: moods
+                                    })
+                                    connection.release();
+                                })
+                            }
+                        ).catch((err) => {
+                            res.status(500);
+                            res.json({
+                                status: 'failure',
+                                message: err.message
+                            })
+                            connection.release();
+                        })
+                    } else {
+                        res.status(404);
+                        res.json({
+                            status: 'failure',
+                            message: `No Moods found`
+                        })
+                    }
+                });
+            });
+        });
+
+    } catch (error) {
+        res.status(404);
+        res.json({
+            status: 'failure',
+            message: `Invalid user ID: ${user_id}`
+        })
+    }
+
+}
+
 const createMood = (req, res) => {
     const { user_id } = req.body
     const { enjoyment, sadness, anger, contempt, disgust, fear, surprise, Romance, Family, Work, Holiday, Lonely, Exercise, Friends, Shopping, comment, timestamp } = req.body;
@@ -338,6 +427,7 @@ const deleteMood = (req, res) => {
 
 module.exports = {
     getMoodsByUser,
+    getMoodsByUserAndDate,
     createMood,
     updateMood,
     deleteMood,

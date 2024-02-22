@@ -10,4 +10,7 @@ router.route('/:id')
     .put(moodController.updateMood)
     .delete(moodController.deleteMood);
 
+    router.route('/date')
+    .get(moodController.getMoodsByUserAndDate)
+
 module.exports = router;
