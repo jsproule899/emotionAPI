@@ -249,6 +249,7 @@ const createMood = (req, res) => {
                                                                     status: 'success',
                                                                     message: `Record ID ${moodInsertID} added`
                                                                 })
+                                                                connection.release();
                                                             });
                                                         });
                                                     });
